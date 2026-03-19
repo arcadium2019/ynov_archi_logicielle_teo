@@ -1,0 +1,98 @@
+services:
+
+  # ─── Exercice 1 : Design Patterns (démo, s'arrête après exécution) ──────────
+  patterns-demo:
+    build: ./exercice-1-patterns
+    container_name: ex1-patterns-demo
+    restart: "no"
+
+  # ─── Exercice 2 : SOLID Principles (démo, s'arrête après exécution) ─────────
+  solid-demo:
+    build: ./exercice-2-solid
+    container_name: ex2-solid-demo
+    restart: "no"
+
+  # ─── Exercice 3 : Monolithe Spring Boot ─────────────────────────────────────
+  monolith:
+    build: ./exercice-3-monolith
+    container_name: ex3-monolith
+    ports:
+      - "8085:8080"   # 8085 sur la machine → 8080 dans le conteneur
+    restart: unless-stopped
+
+  # ─── Exercice 4 : Microservices ─────────────────────────────────────────────
+  discovery-service:
+    build: ./exercice-4-microservices/discovery-service
+    container_name: ex4-discovery
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  api-gateway:
+    build: ./exercice-4-microservices/api-gateway
+    container_name: ex4-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  book-service:
+    build: ./exercice-4-microservices/book-service
+    container_name: ex4-book-service
+    ports:
+      - "8081:8081"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  user-service:
+    build: ./exercice-4-microservices/user-service
+    container_name: ex4-user-service
+    ports:
+      - "8082:8082"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  loan-service:
+    build: ./exercice-4-microservices/loan-service
+    container_name: ex4-loan-service
+    ports:
+      - "8083:8083"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      book-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    restart: unless-stopped
+
+  review-service:
+    build: ./exercice-4-microservices/review-service
+    container_name: ex4-review-service
+    ports:
+      - "8084:8084"
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://discovery-service:8761/eureka/
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    restart: unless-stopped
